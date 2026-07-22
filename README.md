@@ -1,7 +1,8 @@
 # Sony WH-1000XM6 — Cinematic Scrollytelling Web Experience
 
-### Viw: [3dsoney.vercel.app/](https://3dsoney.vercel.app/)
+> View: [3dsoney.vercel.app/](https://3dsoney.vercel.app/)
 
+---
 
 ![Sony WH-1000XM6](screenshots/hero.png)
 
