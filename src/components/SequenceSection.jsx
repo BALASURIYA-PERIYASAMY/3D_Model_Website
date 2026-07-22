@@ -180,9 +180,26 @@ export default function SequenceSection({ onLoadingProgress, onReady }) {
     }
     window.addEventListener('resize', onResize, { passive: true })
 
+    // Safety fallback timer — unlocks page after 2.5s regardless of network speed
+    const fallbackTimer = setTimeout(() => {
+      if (!s.isReady) {
+        s.isReady = true
+        onReady?.()
+      }
+    }, 2500)
+
     // Image preload — prioritized: first frame, last frame, then sequential
     const priorityOrder = [1, TOTAL_FRAMES]
     for (let i = 2; i < TOTAL_FRAMES; i++) priorityOrder.push(i)
+
+    const checkReadyThreshold = () => {
+      onLoadingProgress?.(s.loadedCount / TOTAL_FRAMES)
+      if (!s.isReady && s.loadedCount >= Math.ceil(TOTAL_FRAMES * 0.08)) {
+        s.isReady = true
+        clearTimeout(fallbackTimer)
+        onReady?.()
+      }
+    }
 
     priorityOrder.forEach((n, idx) => {
       const img  = new Image()
@@ -192,27 +209,23 @@ export default function SequenceSection({ onLoadingProgress, onReady }) {
         s.images[n - 1] = img
         s.loadedCount++
 
-        // Update loading bar (direct ref — zero re-renders)
-        onLoadingProgress?.(s.loadedCount / TOTAL_FRAMES)
-
         // Show first frame the instant it's available
-        if (s.loadedCount === 1) {
+        if (s.loadedCount === 1 || n === 1) {
           resizeCanvas()
           drawFrame(0)
           s.lastDrawnFrame = 0
         }
 
-        // Unlock experience at 8% loaded
-        if (!s.isReady && s.loadedCount >= Math.ceil(TOTAL_FRAMES * 0.08)) {
-          s.isReady = true
-          onReady?.()
-        }
+        checkReadyThreshold()
       }
 
-      img.onerror = () => { s.loadedCount++ }
+      img.onerror = () => {
+        s.loadedCount++
+        checkReadyThreshold()
+      }
 
-      // Stagger requests to avoid network saturation
-      setTimeout(() => { img.src = framePath(n) }, idx * 6)
+      // Stagger requests slightly
+      setTimeout(() => { img.src = framePath(n) }, idx * 4)
     })
 
     return () => {
